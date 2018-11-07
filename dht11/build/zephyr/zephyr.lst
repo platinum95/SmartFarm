@@ -1818,10 +1818,10 @@ int snprintk(char *str, size_t size, const char *fmt, ...)
      dd0:	00000ac9 	.word	0x00000ac9
 
 00000dd4 <_ConfigAbsSyms>:
-GEN_ABSOLUTE_SYM(CONFIG_HAS_HW_NRF_LPCOMP, 1);
-GEN_ABSOLUTE_SYM(CONFIG_HAS_HW_NRF_MWU, 1);
-GEN_ABSOLUTE_SYM(CONFIG_BT_CTLR_CRYPTO, 1);
-GEN_ABSOLUTE_SYM(CONFIG_HAS_HW_NRF_NFCT, 1);
+GEN_ABSOLUTE_SYM(CONFIG_HAS_HW_NRF_SPI1, 1);
+GEN_ABSOLUTE_SYM(CONFIG_BT_CTLR_RX_BUFFERS, 1);
+GEN_ABSOLUTE_SYM(CONFIG_MINIMAL_LIBC_MALLOC_ARENA_SIZE, 0);
+GEN_ABSOLUTE_SYM(CONFIG_BT_CTLR_TX_BUFFERS, 2);
 
 GEN_ABS_SYM_END
      dd4:	4770      	bx	lr
@@ -23362,9 +23362,9 @@ static s8_t dht_measure_signal_duration(struct dht_data *drv_data,
 
 	return api->read(port, access_op, pin, value);
     9572:	6843      	ldr	r3, [r0, #4]
-    9574:	2200      	movs	r2, #0
+    9574:	2213      	movs	r2, #19
     9576:	689f      	ldr	r7, [r3, #8]
-    9578:	4611      	mov	r1, r2
+    9578:	2100      	movs	r1, #0
     957a:	ab01      	add	r3, sp, #4
     957c:	47b8      	blx	r7
 		elapsed_cycles = k_cycle_get_32() - start_cycles;
@@ -23410,9 +23410,9 @@ static int dht_init(struct device *dev)
     95b4:	b170      	cbz	r0, 95d4 <dht_init+0x2c>
 	return api->config(port, access_op, pin, flags);
     95b6:	6843      	ldr	r3, [r0, #4]
-    95b8:	2200      	movs	r2, #0
-    95ba:	4611      	mov	r1, r2
-    95bc:	681d      	ldr	r5, [r3, #0]
+    95b8:	2213      	movs	r2, #19
+    95ba:	681d      	ldr	r5, [r3, #0]
+    95bc:	2100      	movs	r1, #0
     95be:	2301      	movs	r3, #1
     95c0:	47a8      	blx	r5
 	}
@@ -23424,9 +23424,9 @@ static int dht_init(struct device *dev)
     95c2:	6820      	ldr	r0, [r4, #0]
 	return api->write(port, access_op, pin, value);
     95c4:	6843      	ldr	r3, [r0, #4]
-    95c6:	2200      	movs	r2, #0
+    95c6:	2213      	movs	r2, #19
     95c8:	685c      	ldr	r4, [r3, #4]
-    95ca:	4611      	mov	r1, r2
+    95ca:	2100      	movs	r1, #0
     95cc:	2301      	movs	r3, #1
     95ce:	47a0      	blx	r4
 
@@ -23451,10 +23451,10 @@ static inline int gpio_pin_write(struct device *port, u32_t pin,
     95e2:	b410      	push	{r4}
 	return api->write(port, access_op, pin, value);
     95e4:	685c      	ldr	r4, [r3, #4]
-    95e6:	2200      	movs	r2, #0
+    95e6:	2213      	movs	r2, #19
     95e8:	460b      	mov	r3, r1
     95ea:	46a4      	mov	ip, r4
-    95ec:	4611      	mov	r1, r2
+    95ec:	2100      	movs	r1, #0
 				 u32_t value)
 {
 	return gpio_write(port, GPIO_ACCESS_BY_PIN, pin, value);
@@ -23488,7 +23488,7 @@ static inline int gpio_pin_write(struct device *port, u32_t pin,
     9614:	681d      	ldr	r5, [r3, #0]
     9616:	2300      	movs	r3, #0
     9618:	4619      	mov	r1, r3
-    961a:	461a      	mov	r2, r3
+    961a:	2213      	movs	r2, #19
     961c:	47a8      	blx	r5
 	if (dht_measure_signal_duration(drv_data, 1) == -1) {
     961e:	2101      	movs	r1, #1
@@ -23501,9 +23501,9 @@ static inline int gpio_pin_write(struct device *port, u32_t pin,
 	gpio_pin_configure(drv_data->gpio, CONFIG_DHT_GPIO_PIN_NUM,
     962e:	6820      	ldr	r0, [r4, #0]
     9630:	6843      	ldr	r3, [r0, #4]
-    9632:	2200      	movs	r2, #0
-    9634:	4611      	mov	r1, r2
-    9636:	681e      	ldr	r6, [r3, #0]
+    9632:	2213      	movs	r2, #19
+    9634:	681e      	ldr	r6, [r3, #0]
+    9636:	2100      	movs	r1, #0
     9638:	2301      	movs	r3, #1
     963a:	47b0      	blx	r6
 	gpio_pin_write(drv_data->gpio, CONFIG_DHT_GPIO_PIN_NUM, 1);

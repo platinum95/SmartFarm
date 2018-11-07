@@ -1,9 +1,7 @@
 /*
- * Basic DHT11 Application
+ * Copyright (c) 2012-2014 Wind River Systems, Inc.
  *
- * Mark Anderson
- * Trinity College Dublin
- * 5/11/18
+ * SPDX-License-Identifier: Apache-2.
  */
 
 #include <zephyr.h>
