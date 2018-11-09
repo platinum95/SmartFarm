@@ -1,7 +1,7 @@
 /*
- * ADC Example Code
- * to-do: Adapt specifically for force sensor and mositure sensor
- * Implement same using interrupts
+ * ADC Code
+ * Basic timer functionality added
+ * Need to process data
 */
 
 #include <zephyr.h>
@@ -22,6 +22,7 @@
 #define ADC_2ND_CHANNEL_ID	2
 #define ADC_2ND_CHANNEL_INPUT	NRF_SAADC_INPUT_AIN2
 
+#define SAMPLE_TIME 1
 
 #define BUFFER_SIZE  6
 static s16_t m_sample_buffer[BUFFER_SIZE];
@@ -131,23 +132,11 @@ void main(void)
 {
 	struct k_timer force_timer, soil_timer;
 
-	//int sample;
-
-	printk("Preparing ADC\n");
-
 	k_timer_init(&force_timer, force_timer_handler, NULL);
 	k_timer_init(&soil_timer, soil_timer_handler, NULL);
 
-	k_timer_start(&force_timer, K_SECONDS(1), K_SECONDS(1));
-	k_timer_start(&soil_timer, K_SECONDS(1), K_SECONDS(1));
+	k_timer_start(&force_timer, K_SECONDS(SAMPLE_TIME), K_SECONDS(SAMPLE_TIME));
+	k_timer_start(&soil_timer, K_SECONDS(SAMPLE_TIME), K_SECONDS(SAMPLE_TIME));
 
-	while (1) {
-		//k_timer_init(&force_timer, force_timer_handler, NULL);
-		//k_timer_start(&force_timer, K_SECONDS(1), K_SECONDS(1));
-		// delay between samples
-		//k_sleep(1000);
-		//int sample = sample_sensor(ADC_1ST_CHANNEL_ID);
-		//printk("%d \n", sample);
-
-	}
+	k_thread_suspend(k_current_get());
 }
