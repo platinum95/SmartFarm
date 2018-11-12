@@ -9,11 +9,28 @@
 #include <zephyr.h>
 #include <device.h>
 #include <sensor.h>
-#include <stdio.h>
+#include <misc/printk.h>
+
+#define SAMPLE_TIME 2
+
+void dht_work_handler(struct k_work *work)
+{
+	int temp = k_cycle_get_32() % 3 + 20;
+	int humidity = k_cycle_get_32() % 5 + 60;
+	printk("Temperature: %d\tHumidity: %d\n", temp, humidity);
+}
+
+K_WORK_DEFINE(dht_work, dht_work_handler);
+
+void dht_timer_handler(struct k_timer *soil_timer)
+{
+	k_work_submit(&dht_work);
+}
 
 void main(void)
 {
 	struct device *dev = device_get_binding("DHT");
+	struct k_timer dht_timer;
 
   if(!dev){
     printk("CAN'T ACCESS DEVICE\n");
@@ -21,17 +38,7 @@ void main(void)
   }
   else printk("dev %p name %s\n", dev, dev->config->name);
 
-	while (1) {
-		struct sensor_value temp, humidity;
-
-		sensor_sample_fetch(dev);
-		sensor_channel_get(dev, SENSOR_CHAN_AMBIENT_TEMP, &temp);
-		sensor_channel_get(dev, SENSOR_CHAN_HUMIDITY, &humidity);
-
-		printk("temp: %d.%02d; humidity: %d.%02d\n",
-		      temp.val1, temp.val2,
-		      humidity.val1, humidity.val2);
-
-		k_sleep(2000);
-	}
+	k_timer_init(&dht_timer, dht_timer_handler, NULL);
+	k_timer_start(&dht_timer, K_SECONDS(SAMPLE_TIME), K_SECONDS(SAMPLE_TIME));
+	k_thread_suspend(k_current_get());
 }
