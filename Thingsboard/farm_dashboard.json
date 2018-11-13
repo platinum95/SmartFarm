@@ -333,7 +333,8 @@
               "outlineWidth": 1
             },
             "stack": true,
-            "tooltipIndividual": false
+            "tooltipIndividual": false,
+            "smoothLines": true
           },
           "title": "Temperature history",
           "dropShadow": true,
@@ -349,6 +350,104 @@
           "actions": {}
         },
         "id": "d1068270-7186-535e-8279-34cc87a98e95"
+      },
+      "26071b49-b961-8a6f-cead-7deb77ad1292": {
+        "isSystemType": true,
+        "bundleAlias": "alarm_widgets",
+        "typeAlias": "alarms_table",
+        "type": "alarm",
+        "title": "New widget",
+        "sizeX": 17,
+        "sizeY": 6,
+        "config": {
+          "timewindow": {
+            "realtime": {
+              "interval": 1000,
+              "timewindowMs": 86400000
+            },
+            "aggregation": {
+              "type": "NONE",
+              "limit": 200
+            }
+          },
+          "showTitle": true,
+          "backgroundColor": "rgb(255, 255, 255)",
+          "color": "rgba(0, 0, 0, 0.87)",
+          "padding": "4px",
+          "settings": {
+            "enableSelection": true,
+            "enableSearch": true,
+            "displayDetails": true,
+            "allowAcknowledgment": true,
+            "allowClear": true,
+            "displayPagination": true,
+            "defaultPageSize": 10,
+            "defaultSortOrder": "-createdTime"
+          },
+          "title": "New Alarms table",
+          "dropShadow": true,
+          "enableFullscreen": true,
+          "titleStyle": {
+            "fontSize": "16px",
+            "fontWeight": 400,
+            "padding": "5px 10px 5px 10px"
+          },
+          "useDashboardTimewindow": false,
+          "showLegend": false,
+          "alarmSource": {
+            "type": "entity",
+            "dataKeys": [
+              {
+                "name": "createdTime",
+                "type": "alarm",
+                "label": "Created time",
+                "color": "#2196f3",
+                "settings": {},
+                "_hash": 0.6191862703079642
+              },
+              {
+                "name": "originator",
+                "type": "alarm",
+                "label": "Originator",
+                "color": "#4caf50",
+                "settings": {},
+                "_hash": 0.5971227867707951
+              },
+              {
+                "name": "type",
+                "type": "alarm",
+                "label": "Type",
+                "color": "#f44336",
+                "settings": {},
+                "_hash": 0.9082713050626048
+              },
+              {
+                "name": "severity",
+                "type": "alarm",
+                "label": "Severity",
+                "color": "#ffc107",
+                "settings": {},
+                "_hash": 0.6154880254768342
+              },
+              {
+                "name": "status",
+                "type": "alarm",
+                "label": "Status",
+                "color": "#607d8b",
+                "settings": {},
+                "_hash": 0.7818980041298127
+              }
+            ],
+            "entityAliasId": "aa0b1475-518b-736e-a058-b77743a2c841",
+            "name": "alarms"
+          },
+          "alarmSearchStatus": "ANY",
+          "alarmsPollingInterval": 1,
+          "datasources": [],
+          "widgetStyle": {},
+          "actions": {}
+        },
+        "id": "26071b49-b961-8a6f-cead-7deb77ad1292"
       }
     },
     "states": {
@@ -383,6 +482,12 @@
                 "mobileHeight": null,
                 "row": 4,
                 "col": 5
+              },
+              "26071b49-b961-8a6f-cead-7deb77ad1292": {
+                "sizeX": 17,
+                "sizeY": 6,
+                "row": 8,
+                "col": 0
               }
             },
             "gridSettings": {
