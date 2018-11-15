@@ -1,0 +1,68 @@
+{
+  "ruleChain": {
+    "additionalInfo": null,
+    "name": "Temperature Alarm",
+    "firstRuleNodeId": null,
+    "root": false,
+    "debugMode": false,
+    "configuration": null
+  },
+  "metadata": {
+    "firstNodeIndex": 0,
+    "nodes": [
+      {
+        "additionalInfo": {
+          "layoutX": 340,
+          "layoutY": 153
+        },
+        "type": "org.thingsboard.rule.engine.filter.TbJsFilterNode",
+        "name": "Safe Range",
+        "debugMode": false,
+        "configuration": {
+          "jsScript": "return (msg.Temp > 0 && msg.Temp < 23);"
+        }
+      },
+      {
+        "additionalInfo": {
+          "layoutX": 631,
+          "layoutY": 241
+        },
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "Temperature alarm",
+        "debugMode": false,
+        "configuration": {
+          "alarmType": "Unsafe Temperature",
+          "alarmDetailsBuildJs": "var details = {};\ndetails.temperature = msg.Temp;\n\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n    details.count = prevDetails.count + 1;\n} else {\n    details.count = 1;\n}\nreturn details;",
+          "severity": "MAJOR",
+          "propagate": true
+        }
+      },
+      {
+        "additionalInfo": {
+          "layoutX": 651,
+          "layoutY": 65
+        },
+        "type": "org.thingsboard.rule.engine.action.TbClearAlarmNode",
+        "name": "Clear temperature alarm",
+        "debugMode": false,
+        "configuration": {
+          "alarmType": "Unsafe Temperature",
+          "alarmDetailsBuildJs": "var details = {};\n\nif (metadata.prevAlarmDetails) {\n    details = JSON.parse(metadata.prevAlarmDetails);\n}\n\ndetails.clearedTemperature = msg.temperature;\n\nreturn details;"
+        }
+      }
+    ],
+    "connections": [
+      {
+        "fromIndex": 0,
+        "toIndex": 1,
+        "type": "False"
+      },
+      {
+        "fromIndex": 0,
+        "toIndex": 2,
+        "type": "True"
+      }
+    ],
+    "ruleChainConnections": null
+  }
+}
