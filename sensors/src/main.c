@@ -102,50 +102,31 @@ int sample_sensor (int channel_id)
 	return m_sample_buffer[0];
 }
 
-void dht_work_handler(struct k_work *work)
+void sensor_work_handler(struct k_work *work)
 {
 	int temp = k_cycle_get_32() % 3 + 20;
-	int humidity = k_cycle_get_32() % 5 + 60;
+	int humidity = (k_cycle_get_32() >> 2) % 5 + 60;
+	uint16_t force_sample = sample_sensor(ADC_1ST_CHANNEL_ID);
+	uint16_t soil_sample = sample_sensor(ADC_2ND_CHANNEL_ID);
+
+	int8_t soil_moisture = (soil_sample/1024) * 100;
+
 	printk("\nTemperature: %d\nHumidity: %d\n", temp, humidity);
-}
-
-K_WORK_DEFINE(dht_work, dht_work_handler);
-
-void dht_timer_handler(struct k_timer *soil_timer)
-{
-	k_work_submit(&dht_work);
-}
-
-void force_work_handler(struct k_work *work)
-{
-	int force_sample = sample_sensor(ADC_1ST_CHANNEL_ID);
 	printk("Force Sample: %d\n", force_sample);
+	printk("Soil Moisture: %d\%\n", soil_moisture);
 }
 
-K_WORK_DEFINE(force_work, force_work_handler);
+K_WORK_DEFINE(sensor_work, sensor_work_handler);
 
-void force_timer_handler(struct k_timer *force_timer)
+void sensor_timer_handler(struct k_timer *sensor_timer)
 {
-	k_work_submit(&force_work);
-}
-
-void soil_work_handler(struct k_work *work)
-{
-	int soil_sample = sample_sensor(ADC_2ND_CHANNEL_ID);
-	printk("Soil Sample: %d\n", soil_sample);
-}
-
-K_WORK_DEFINE(soil_work, soil_work_handler);
-
-void soil_timer_handler(struct k_timer *soil_timer)
-{
-	k_work_submit(&soil_work);
+	k_work_submit(&sensor_work);
 }
 
 void main(void)
 {
 	struct device *dev = device_get_binding("DHT");
-	struct k_timer dht_timer, force_timer, soil_timer;
+	struct k_timer sensor_timer;
 
 	#if defined(DHT11)
 	if(!dev){
@@ -155,13 +136,8 @@ void main(void)
 	else printk("dev %p name %s\n", dev, dev->config->name);
 	#endif
 
-	k_timer_init(&dht_timer, dht_timer_handler, NULL);
-	k_timer_init(&force_timer, force_timer_handler, NULL);
-	k_timer_init(&soil_timer, soil_timer_handler, NULL);
-
-	k_timer_start(&dht_timer, K_SECONDS(SAMPLE_TIME), K_SECONDS(SAMPLE_TIME));
-	k_timer_start(&force_timer, K_SECONDS(SAMPLE_TIME), K_SECONDS(SAMPLE_TIME));
-	k_timer_start(&soil_timer, K_SECONDS(SAMPLE_TIME), K_SECONDS(SAMPLE_TIME));
+	k_timer_init(&sensor_timer, sensor_timer_handler, NULL);
+	k_timer_start(&sensor_timer, K_SECONDS(SAMPLE_TIME), K_SECONDS(SAMPLE_TIME));
 
 	k_thread_suspend(k_current_get());
 }
