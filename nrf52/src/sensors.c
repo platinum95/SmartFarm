@@ -26,6 +26,7 @@
 #define ADC_2ND_CHANNEL_INPUT	NRF_SAADC_INPUT_AIN2
 
 #define SAMPLE_TIME 60
+#define DHT_SIM 1
 
 #define BUFFER_SIZE  6
 static s16_t m_sample_buffer[BUFFER_SIZE];
@@ -107,16 +108,30 @@ int sample_sensor (int channel_id)
 
 void sensor_work_handler(struct k_work *work)
 {
+	#if defined(CONFIG_DHT)
+	struct device *dev = device_get_binding("DHT");
+	if(!dev){
+		printk("CAN'T ACCESS DHT11\n");
+	}
+
+	#if defined(DHT_SIM)
 	int temp = k_cycle_get_32() % 3 + 20;
 	int humidity = (k_cycle_get_32() >> 2) % 5 + 60;
-	uint16_t force_sample = sample_sensor(ADC_1ST_CHANNEL_ID);
-	uint16_t soil_sample = sample_sensor(ADC_2ND_CHANNEL_ID);
-
-	int8_t soil_moisture = (soil_sample/1024) * 100;
-
 	printk("\nTemperature: %d\nHumidity: %d\n", temp, humidity);
+	#endif
+	#endif
+
+	#if defined(CONFIG_ADC)
+	#if defined(ADC_1ST_CHANNEL_ID)
+	uint16_t force_sample = sample_sensor(ADC_1ST_CHANNEL_ID);
 	printk("Force Sample: %d\n", force_sample);
+	#endif
+	#if defined(ADC_2ND_CHANNEL_ID)
+	uint16_t soil_sample = sample_sensor(ADC_2ND_CHANNEL_ID);
+	int8_t soil_moisture = (soil_sample/1024) * 100;
 	printk("Soil Moisture: %d\%\n", soil_moisture);
+	#endif
+	#endif
 }
 
 K_WORK_DEFINE(sensor_work, sensor_work_handler);
@@ -128,15 +143,7 @@ void sensor_timer_handler(struct k_timer *sensor_timer)
 
 void sensors_start(void)
 {
-	struct device *dev = device_get_binding("DHT");
 	struct k_timer sensor_timer;
-
-	if(!dev){
-		printk("CAN'T ACCESS DHT11\n");
-	}
-
 	k_timer_init(&sensor_timer, sensor_timer_handler, NULL);
 	k_timer_start(&sensor_timer, K_SECONDS(SAMPLE_TIME), K_SECONDS(SAMPLE_TIME));
-
-	k_thread_suspend(k_current_get());
 }
