@@ -28,9 +28,9 @@
 #define MQTT_CLIENTID		"zephyr_publisher"
 
 #ifdef CONFIG_MQTT_LIB_TLS
-#define SERVER_PORT		8883
+#define SERVER_PORT		1884
 #else
-#define SERVER_PORT		1883
+#define SERVER_PORT		1884
 #endif
 
 #define APP_NET_INIT_TIMEOUT    15000

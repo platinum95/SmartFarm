@@ -25,7 +25,7 @@
 #include "sensors.h"
 #include "config.h"
 
-#define ATTR_UPDATE_INTERVAL 500
+#define ATTR_UPDATE_INTERVAL 10
 
 #define RC_STR(rc)	((rc) == 0 ? "OK" : "ERROR")
 #define PRINT_RESULT(func, rc)	\
@@ -125,9 +125,9 @@ void main(void)
   k_timer_start(&attribute_timer, K_SECONDS(ATTR_UPDATE_INTERVAL), K_SECONDS(ATTR_UPDATE_INTERVAL));
   #endif
 
-  #if defined(CONFIG_DHT) || CONFIG_ADC
+  //#if defined(CONFIG_DHT) || CONFIG_ADC
 	sensors_start();
-  #endif
+  //#endif
 
   k_thread_suspend(k_current_get());
 }
