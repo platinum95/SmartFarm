@@ -12,8 +12,8 @@
     "nodes": [
       {
         "additionalInfo": {
-          "layoutX": 594,
-          "layoutY": 235
+          "layoutX": 744,
+          "layoutY": 401
         },
         "type": "org.thingsboard.rule.engine.telemetry.TbMsgTimeseriesNode",
         "name": "Save Timeseries",
@@ -81,6 +81,18 @@
         "configuration": {
           "timeoutInSeconds": 60
         }
+      },
+      {
+        "additionalInfo": {
+          "layoutX": 457,
+          "layoutY": 280
+        },
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "Force to Litres",
+        "debugMode": false,
+        "configuration": {
+          "jsScript": "new_temp = 0.1211*Math.exp(0.0094*msg.F);\nif (msg.F) \n    msg.F = new_temp;\nreturn {msg: msg, metadata: metadata, msgType: msgType};"
+        }
       }
     ],
     "connections": [
@@ -96,7 +108,7 @@
       },
       {
         "fromIndex": 2,
-        "toIndex": 0,
+        "toIndex": 6,
         "type": "Post telemetry"
       },
       {
@@ -108,6 +120,16 @@
         "fromIndex": 2,
         "toIndex": 5,
         "type": "RPC Request to Device"
+      },
+      {
+        "fromIndex": 6,
+        "toIndex": 0,
+        "type": "Failure"
+      },
+      {
+        "fromIndex": 6,
+        "toIndex": 0,
+        "type": "Success"
       }
     ],
     "ruleChainConnections": [
