@@ -16,6 +16,7 @@
 
 #include "sensors.h"
 #include "config.h"
+#include "lights.h"
 
 
 #define ADC_DEVICE_NAME		CONFIG_ADC_0_NAME
@@ -110,10 +111,10 @@ int sample_sensor (int channel_id)
 
 void sensor_work_handler(struct k_work *work)
 {
-	char json_buff[42];
-	char dht_buff[20] = "";
-	char force_buff[11] = "";
-	char soil_buff[9] = "";
+	static char json_buff[42];
+	static char dht_buff[20] = "";
+	static char force_buff[11] = "";
+	static char soil_buff[9] = "";
 
 	#if defined(CONFIG_DHT)
 	struct device *dev = device_get_binding("DHT");
@@ -142,6 +143,7 @@ void sensor_work_handler(struct k_work *work)
 
 	snprintk(json_buff, 42, "{%s%s%s}", dht_buff, force_buff, soil_buff);
 	tb_publish_telemetry(json_buff);
+	printk("telemetry published\n");
 }
 
 K_WORK_DEFINE(sensor_work, sensor_work_handler);
@@ -157,5 +159,5 @@ void sensors_start(void)
 	struct k_timer sensor_timer;
 	k_timer_init(&sensor_timer, sensor_timer_handler, NULL);
 	k_timer_start(&sensor_timer, K_SECONDS(SAMPLE_TIME), K_SECONDS(SAMPLE_TIME));
-	while(1){}
+
 }

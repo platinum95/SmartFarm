@@ -24,8 +24,9 @@
 #include "tb_pubsub.h"
 #include "sensors.h"
 #include "config.h"
+#include "lights.h"
 
-#define ATTR_UPDATE_INTERVAL 10
+#define ATTR_UPDATE_INTERVAL 15000
 
 #define RC_STR(rc)	((rc) == 0 ? "OK" : "ERROR")
 #define PRINT_RESULT(func, rc)	\
@@ -39,7 +40,7 @@ static void update_attributes()
 	/* Formulate the JSON payload for the attribute update */
 	snprintk(payload, sizeof(payload), "{\"firmware_version\":\"%s\", \"serial_number\":\"%s\", \"uptime\":\"%d\"}",
 		"1.2.3",
-		"andersm",
+		"andersm001",
 		(uint32_t)k_uptime_get_32() / 1000);
 
 	tb_publish_attributes(payload);
@@ -96,21 +97,21 @@ static int network_setup(void)
 	return 0;
 }
 
-void attribute_work_handler(struct k_work *work)
-{
-  printk("Updating Attributes\n");
-  update_attributes();
-}
+// void attribute_work_handler(struct k_work *work)
+// {
+//   printk("Updating Attributes\n");
+//   update_attributes();
+// }
+//
+// K_WORK_DEFINE(attribute_work, attribute_work_handler);
+//
+// void attribute_timer_handler(struct k_timer *attribute_timer)
+// {
+// 	k_work_submit(&attribute_work);
+// }
 
-K_WORK_DEFINE(attribute_work, attribute_work_handler);
-
-void attribute_timer_handler(struct k_timer *attribute_timer)
-{
-	k_work_submit(&attribute_work);
-}
 void main(void)
 {
-  #if defined(CONFIG_NET_L2_BT)
 	int rc;
 	rc = network_setup();
 	PRINT_RESULT("network_setup", rc);
@@ -120,14 +121,17 @@ void main(void)
 
   tb_pubsub_start();
 
-  struct k_timer attribute_timer;
-  k_timer_init(&attribute_timer, attribute_timer_handler, NULL);
-  k_timer_start(&attribute_timer, K_SECONDS(ATTR_UPDATE_INTERVAL), K_SECONDS(ATTR_UPDATE_INTERVAL));
-  #endif
+  //struct k_timer attribute_timer;
+  //k_timer_init(&attribute_timer, attribute_timer_handler, NULL);
+  //k_timer_start(&attribute_timer, K_SECONDS(ATTR_UPDATE_INTERVAL), K_SECONDS(ATTR_UPDATE_INTERVAL));
 
   //#if defined(CONFIG_DHT) || CONFIG_ADC
 	sensors_start();
+  lights_init();
   //#endif
 
-  k_thread_suspend(k_current_get());
+  while (true) {
+    k_sleep(ATTR_UPDATE_INTERVAL);
+    update_attributes();
+  }
 }
