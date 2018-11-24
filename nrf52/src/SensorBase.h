@@ -112,11 +112,11 @@ public:
             return -1;
         }
 
-	    if( auto ret=adc_channel_setup( this->devBinding, &this->channelConfig ) ){
-		    printf( "Failed to setup channel %i; error %i",
+        if( auto ret=adc_channel_setup( this->devBinding, &this->channelConfig ) ){
+            printf( "Failed to setup channel %i; error %i",
                     this->channelConfig.channel_id, ret );
             return ret;
-	    }
+        }
         return 0;
     }
 
