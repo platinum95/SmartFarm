@@ -11,7 +11,7 @@
 
 #include <net/net_context.h>
 
-#include <misc/printk.h>
+#include <misc/printf.h>
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
@@ -30,7 +30,7 @@
 
 #define RC_STR(rc)	((rc) == 0 ? "OK" : "ERROR")
 #define PRINT_RESULT(func, rc)	\
-	printk("[%s:%d] %s: %d <%s>\n", __func__, __LINE__, \
+	printf("[%s:%d] %s: %d <%s>\n", __func__, __LINE__, \
 	       (func), rc, RC_STR(rc))
 
 static void update_attributes()
@@ -38,7 +38,7 @@ static void update_attributes()
 	static char payload[128];
 
 	/* Formulate the JSON payload for the attribute update */
-	snprintk(payload, sizeof(payload), "{\"firmware_version\":\"%s\", \"serial_number\":\"%s\", \"uptime\":\"%d\"}",
+	snprintf(payload, sizeof(payload), "{\"firmware_version\":\"%s\", \"serial_number\":\"%s\", \"uptime\":\"%d\"}",
 		"1.2.3",
 		"andersm001",
 		(uint32_t)k_uptime_get_32() / 1000);
@@ -59,7 +59,7 @@ static
 void bt_disconnect_cb(struct bt_conn *conn, u8_t reason)
 {
 	bt_connected = false;
-	printk("bt disconnected (reason %u)\n", reason);
+	printf("bt disconnected (reason %u)\n", reason);
 }
 
 static
@@ -79,36 +79,37 @@ static int network_setup(void)
 
 	rc = bt_enable(NULL);
 	if (rc && rc != -EALREADY) {
-		printk("bluetooth init failed\n");
+		printf("bluetooth init failed\n");
 		return rc;
 	}
 
 	bt_conn_cb_register(&bt_conn_cb);
 
-	printk("\nwaiting for bt connection: ");
+	printf("\nwaiting for bt connection: ");
 	while (bt_connected == false) {
 		k_sleep(250);
-		printk("%c\b", progress_mark[i]);
+		printf("%c\b", progress_mark[i]);
 		i = (i + 1) % (sizeof(progress_mark) - 1);
 	}
-	printk("\n");
+	printf("\n");
 #endif
 
 	return 0;
 }
 
-// void attribute_work_handler(struct k_work *work)
-// {
-//   printk("Updating Attributes\n");
-//   update_attributes();
-// }
-//
-// K_WORK_DEFINE(attribute_work, attribute_work_handler);
-//
-// void attribute_timer_handler(struct k_timer *attribute_timer)
-// {
-// 	k_work_submit(&attribute_work);
-// }
+void attribute_work_handler(struct k_work *work)
+{
+  printf("Updating Attributes\n");
+  update_attributes();
+  sensors();
+}
+
+K_WORK_DEFINE(attribute_work, attribute_work_handler);
+
+void attribute_timer_handler(struct k_timer *attribute_timer)
+{
+	k_work_submit(&attribute_work);
+}
 
 void main(void)
 {
@@ -121,17 +122,9 @@ void main(void)
 
   tb_pubsub_start();
 
-  //struct k_timer attribute_timer;
-  //k_timer_init(&attribute_timer, attribute_timer_handler, NULL);
-  //k_timer_start(&attribute_timer, K_SECONDS(ATTR_UPDATE_INTERVAL), K_SECONDS(ATTR_UPDATE_INTERVAL));
+  struct k_timer attribute_timer;
+  k_timer_init(&attribute_timer, attribute_timer_handler, NULL);
+  k_timer_start(&attribute_timer, K_SECONDS(5), K_SECONDS(5));
 
-  //#if defined(CONFIG_DHT) || CONFIG_ADC
-	sensors_start();
-  lights_init();
-  //#endif
-
-  while (true) {
-    k_sleep(ATTR_UPDATE_INTERVAL);
-    update_attributes();
-  }
+  k_thread_suspend(k_current_get());
 }

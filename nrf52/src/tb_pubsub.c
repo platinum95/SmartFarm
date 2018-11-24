@@ -12,13 +12,14 @@
 #include <zephyr.h>
 #include <net/mqtt.h>
 
-#include <misc/printk.h>
+#include <misc/printf.h>
 #include <string.h>
 #include <stdio.h>
 #include <bluetooth/bluetooth.h>
 
 #include <json.h>
 
+#include "lights.h"
 #include "config.h"
 
 #define MAX_PENDING_PUB_MSGS 8
@@ -37,7 +38,7 @@ K_ALERT_DEFINE(tb_connack_alert, K_ALERT_DEFAULT, 1);
 
 #define RC_STR(rc)	((rc) == 0 ? "OK" : "ERROR")
 #define PRINT_RESULT(func, rc)	\
-	printk("[%s:%d] %s: %d <%s>\n", __func__, __LINE__, \
+	printf("[%s:%d] %s: %d <%s>\n", __func__, __LINE__, \
 	       (func), rc, RC_STR(rc))
 
 /* Container for some structures used by the MQTT pubsub app. */
@@ -75,34 +76,34 @@ struct rpc_putLights {
 	} params;
 };
 
-// void handle_putLights(char *json, int json_len)
-// {
-// 	printk("[%s:%d] parsing: %s\n",	__func__, __LINE__, json);
-//
-// 	/* Refer to zephyr/include/json.h !!! */
-//
-// 	/* JSON RPC params for putLights */
-// 	static const struct json_obj_descr rpc_descr_params[] = {
-// 		JSON_OBJ_DESCR_PRIM(struct rpc_putLights_params, ledno, JSON_TOK_NUMBER),
-// 		JSON_OBJ_DESCR_PRIM(struct rpc_putLights_params, value, JSON_TOK_TRUE),
-// 	};
-//
-// 	/* JSON generic thingsboard.io RPC */
-// 	static const struct json_obj_descr rpc_descr[] = {
-// 		JSON_OBJ_DESCR_PRIM(struct rpc_putLights, method, JSON_TOK_STRING),
-// 		JSON_OBJ_DESCR_OBJECT(struct rpc_putLights, params, rpc_descr_params)
-// 	};
-//
-// 	struct rpc_putLights rx_rpc={};
-//
-// 	json_obj_parse(json, json_len, rpc_descr, ARRAY_SIZE(rpc_descr), &rx_rpc);
-//
-// 	printk("[%s:%d] parsed method: %s, params: led%d=%s\n",
-// 		__func__, __LINE__, rx_rpc.method, rx_rpc.params.ledno, rx_rpc.params.value ? "ON" : "OFF");
-//
-// 	/* Call light control provided by lights.c */
-// 	putLights(rx_rpc.params.ledno, rx_rpc.params.value);
-// }
+void handle_putLights(char *json, int json_len)
+{
+	printf("[%s:%d] parsing: %s\n",	__func__, __LINE__, json);
+
+	/* Refer to zephyr/include/json.h !!! */
+
+	/* JSON RPC params for putLights */
+	static const struct json_obj_descr rpc_descr_params[] = {
+		JSON_OBJ_DESCR_PRIM(struct rpc_putLights_params, ledno, JSON_TOK_NUMBER),
+		JSON_OBJ_DESCR_PRIM(struct rpc_putLights_params, value, JSON_TOK_TRUE),
+	};
+
+	/* JSON generic thingsboard.io RPC */
+	static const struct json_obj_descr rpc_descr[] = {
+		JSON_OBJ_DESCR_PRIM(struct rpc_putLights, method, JSON_TOK_STRING),
+		JSON_OBJ_DESCR_OBJECT(struct rpc_putLights, params, rpc_descr_params)
+	};
+
+	struct rpc_putLights rx_rpc={};
+
+	json_obj_parse(json, json_len, rpc_descr, ARRAY_SIZE(rpc_descr), &rx_rpc);
+
+	printf("[%s:%d] parsed method: %s, params: led%d=%s\n",
+		__func__, __LINE__, rx_rpc.method, rx_rpc.params.ledno, rx_rpc.params.value ? "ON" : "OFF");
+
+	/* Call light control provided by lights.c */
+	putLights(rx_rpc.params.ledno, rx_rpc.params.value);
+}
 
 /*
  * Process an RPC request received from the thingsboard instance
@@ -121,9 +122,9 @@ void handle_rpc(char *json, int json_len)
 	 * function.
 	 */
 
-	// if ( strncmp(&json[11], "putLights", strlen("putLights")) == 0 ) {
-	// 	handle_putLights(json, json_len);
-	// }
+	if ( strncmp(&json[11], "putLights", strlen("putLights")) == 0 ) {
+		handle_putLights(json, json_len);
+	}
 
 	/*
 	else if ( strncmp(&json[11], "putLights", strlen("myMethod")) == 0 ) {
@@ -137,7 +138,7 @@ void handle_rpc(char *json, int json_len)
  */
 static void connect_cb(struct mqtt_ctx *mqtt_ctx)
 {
-	printk("[%s:%d]\n", __func__, __LINE__);
+	printf("[%s:%d]\n", __func__, __LINE__);
 
 	k_alert_send(&tb_connack_alert);
 }
@@ -147,7 +148,7 @@ static void connect_cb(struct mqtt_ctx *mqtt_ctx)
  */
 static void disconnect_cb(struct mqtt_ctx *mqtt_ctx)
 {
-	printk("[%s:%d]\n", __func__, __LINE__);
+	printf("[%s:%d]\n", __func__, __LINE__);
 
 }
 
@@ -181,7 +182,7 @@ static int publish_tx_cb(struct mqtt_ctx *mqtt_ctx, u16_t pkt_id,
 		str = "Invalid MQTT packet";
 	}
 
-	printk("[%s:%d] <%s> packet id: %u\n", __func__, __LINE__, str, pkt_id);
+	printf("[%s:%d] <%s> packet id: %u\n", __func__, __LINE__, str, pkt_id);
 
 	return rc;
 }
@@ -212,7 +213,7 @@ static int publish_rx_cb(struct mqtt_ctx *ctx, struct mqtt_publish_msg *msg,
 
 	msg->msg[msg->msg_len] = 0;
 
-	printk("[%s:%d] <%s> packet id: %u\n    topic: %s\n    payload: %s\n",
+	printf("[%s:%d] <%s> packet id: %u\n    topic: %s\n    payload: %s\n",
 		__func__, __LINE__, str, pkt_id, msg->topic, msg->msg);
 
 	/* Pass on for RPC processing */
@@ -226,14 +227,14 @@ static int subscribe_cb(struct mqtt_ctx *ctx, u16_t pkt_id,
 {
 	/* Successful subscription to MQTT topic */
 
-	printk("[%s:%d] <%s> packet id: %u\n", __func__, __LINE__, "MQTT_SUBACK", pkt_id);
+	printf("[%s:%d] <%s> packet id: %u\n", __func__, __LINE__, "MQTT_SUBACK", pkt_id);
 	return 0;
 }
 
 
 static int unsubscribe_cb(struct mqtt_ctx *ctx, u16_t pkt_id)
 {
-	printk("[%s:%d] <%s> packet id: %u\n", __func__, __LINE__, "MQTT_UNSUBACK", pkt_id);
+	printf("[%s:%d] <%s> packet id: %u\n", __func__, __LINE__, "MQTT_UNSUBACK", pkt_id);
 	return 0;
 }
 
@@ -243,7 +244,7 @@ static int unsubscribe_cb(struct mqtt_ctx *ctx, u16_t pkt_id)
  */
 static void malformed_cb(struct mqtt_ctx *mqtt_ctx, u16_t pkt_type)
 {
-	printk("[%s:%d] pkt_type: %u\n", __func__, __LINE__, pkt_type);
+	printf("[%s:%d] pkt_type: %u\n", __func__, __LINE__, pkt_type);
 }
 
 K_THREAD_STACK_DEFINE(pubsub_stack_area, PUBSUB_STACK_SIZE);
@@ -288,7 +289,7 @@ void pubsub_thread(void * unused1, void * unused2, void * unused3)
 	bt_addr_to_str(&oob.addr.a, token, sizeof(token));
 	pubsub_ctx.connect_msg.user_name = token;
 
-	printk("Connecting with thingsboard.io token: %s\n", token);
+	printf("Connecting with thingsboard.io token: %s\n", token);
 
 	pubsub_ctx.connect_msg.user_name_len = strlen(pubsub_ctx.connect_msg.user_name);
 
@@ -367,7 +368,7 @@ void pubsub_thread(void * unused1, void * unused2, void * unused3)
 	PRINT_RESULT("mqtt_close", rc);
 
 exit_pub:
-	printk("\nPublisher terminated!!\n");
+	printf("\nPublisher terminated!!\n");
 }
 
 int prepare_msg(struct pub_msg *pub_msg, const char *topic, const char *payload)
@@ -405,7 +406,7 @@ void tb_publish_attributes(const char * attr_payload)
 		return;
 	}
 
-	printk("tb_publish_attributes: %s\n", attr_payload);
+	printf("tb_publish_attributes: %s\n", attr_payload);
 
 	/* Send it to the publish message queue */
 	rc = k_msgq_put(&msgq, &pub_msg, K_NO_WAIT);
@@ -431,7 +432,7 @@ void tb_publish_telemetry(const char * tlmtry_payload)
 		PRINT_RESULT("prepare_msg", rc);
 	}
 
-	printk("tb_publish_telemetry: %s\n", pub_msg.mqtt_publish_msg.msg);
+	printf("tb_publish_telemetry: %s\n", pub_msg.mqtt_publish_msg.msg);
 
 	/* Send it to the publish message queue */
 	rc = k_msgq_put(&msgq, &pub_msg, K_NO_WAIT);
