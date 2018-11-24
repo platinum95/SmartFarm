@@ -398,7 +398,7 @@
               "timewindowMs": 60000
             }
           },
-          "showTitle": true,
+          "showTitle": false,
           "backgroundColor": "rgb(255, 255, 255)",
           "color": "rgba(0, 0, 0, 0.87)",
           "padding": "8px",
@@ -421,7 +421,7 @@
                 "to": 250
               }
             ],
-            "showUnitTitle": false,
+            "showUnitTitle": true,
             "colorPlate": "#fff",
             "colorMajorTicks": "#444",
             "colorMinorTicks": "#666",
@@ -468,7 +468,8 @@
             "colorValueBoxRectEnd": "#666",
             "colorValueBoxBackground": "#babab2",
             "colorValueBoxShadow": "rgba(0,0,0,1)",
-            "majorTicksCount": 8
+            "majorTicksCount": 8,
+            "unitTitle": "Litres"
           },
           "title": "Water Level (L)",
           "dropShadow": true,
