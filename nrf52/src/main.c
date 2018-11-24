@@ -11,7 +11,7 @@
 
 #include <net/net_context.h>
 
-#include <misc/printf.h>
+#include <misc/printk.h>
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>

@@ -12,7 +12,7 @@
 #include <zephyr.h>
 #include <net/mqtt.h>
 
-#include <misc/printf.h>
+#include <misc/printk.h>
 #include <string.h>
 #include <stdio.h>
 #include <bluetooth/bluetooth.h>

@@ -9,7 +9,7 @@
 #include <device.h>
 #include <adc.h>
 #include <hal/nrf_saadc.h>
-#include <misc/printf.h>
+#include <misc/printk.h>
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
