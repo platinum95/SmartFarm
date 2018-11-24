@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
- #define LOG_MODULE_NAME net_tb_device
- #define NET_LOG_LEVEL LOG_LEVEL_DBG
+// #define LOG_MODULE_NAME net_tb_device
+// #define NET_LOG_LEVEL LOG_LEVEL_DBG
 
 #include <zephyr.h>
 
@@ -24,6 +24,7 @@
 #include "tb_pubsub.h"
 #include "sensors.h"
 #include "config.h"
+#include "SensorBase.h"
 
 #define ATTR_UPDATE_INTERVAL 500
 
