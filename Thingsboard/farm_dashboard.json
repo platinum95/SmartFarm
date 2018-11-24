@@ -403,7 +403,7 @@
           "color": "rgba(0, 0, 0, 0.87)",
           "padding": "8px",
           "settings": {
-            "maxValue": 1000,
+            "maxValue": 2000,
             "startAngle": 45,
             "ticksAngle": 270,
             "showBorder": false,
@@ -468,7 +468,7 @@
             "colorValueBoxRectEnd": "#666",
             "colorValueBoxBackground": "#babab2",
             "colorValueBoxShadow": "rgba(0,0,0,1)",
-            "majorTicksCount": 4
+            "majorTicksCount": 8
           },
           "title": "Water Level (L)",
           "dropShadow": true,
