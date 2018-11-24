@@ -56,18 +56,18 @@ struct nathing{
 	int test;
 };
 
-ADCSensor< nathing > ForceSensor( ADC_DEVICE_NAME,
-								  ADC_1ST_CHANNEL_ID,
-								  ADC_ACQUISITION_TIME,
-								  BUFFER_SIZE,
-								  ADC_1ST_CHANNEL_INPUT );
+// ADCSensor< nathing > ForceSensor( ADC_DEVICE_NAME,
+// 								  ADC_1ST_CHANNEL_ID,
+// 								  ADC_ACQUISITION_TIME,
+// 								  BUFFER_SIZE,
+// 								  ADC_1ST_CHANNEL_INPUT );
 
-ADCSensor< nathing >  SoilSensor( ADC_DEVICE_NAME,
-								  ADC_1ST_CHANNEL_ID,
-								  ADC_ACQUISITION_TIME,
-								  BUFFER_SIZE,
-								  ADC_1ST_CHANNEL_INPUT );
-SoileSensor.requestData();
+// ADCSensor< nathing >  SoilSensor( ADC_DEVICE_NAME,
+// 								  ADC_1ST_CHANNEL_ID,
+// 								  ADC_ACQUISITION_TIME,
+// 								  BUFFER_SIZE,
+// 								  ADC_1ST_CHANNEL_INPUT );
+// SoileSensor.requestData();
 static struct device *init_adc(void)
 {
 	int ret;

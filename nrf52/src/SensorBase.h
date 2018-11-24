@@ -6,50 +6,52 @@
 #include <adc.h>
 #include <hal/nrf_saadc.h>
 
-template< typename dataStruct >
 class SensorBase {
 public:
-    SensorBase();
+    SensorBase(){
+
+    }
     virtual int initialise() = 0;
-    virtual dataStruct requestData() = 0;
+    virtual char * requestPayload() = 0;
     struct device * devBinding;
 
-private:
+protected:
     const char * devName;
+    const char * keyName;
+    char payloadData[ 128 ];
+    size_t payloadLen;
 };
 
-#define ADC_MAX_BUFFER_SIZE 16
-
-template< typename dataStruct >
-class ADCSensor : SensorBase< dataStruct > {
+template< int bufferSize >
+class ADCSensor : public SensorBase {
 public:
-    ADCSensor( const char * _adcName,
+    ADCSensor( const char * _keyName,
+               const char * _adcName,
                uint8_t _channelID, 
-               uint8_t _aqTime, 
-               uint32_t _bufSize,
+               uint8_t _aqTime,
                uint8_t _input=NRF_SAADC_INPUT_DISABLED,
                uint8_t _res=10,
-               uint8_t _gain=ADC_GAIN_1_6,
-               uint8_t _ref=ADC_REF_INTERNAL ){
+               adc_gain _gain=ADC_GAIN_1_6,
+               adc_reference _ref=ADC_REF_INTERNAL ){
         this->devName = _adcName;
-        this->channelConfig = {
-            gain             : _gain,
-            reference        : _ref,
-            acquisition_time : _aqTime,
-            channel_id       : _channelID,
-            input_positive   : _input,
-        };
+        this->keyName = _keyName;
+        size_t keyLen = strlen( _keyName );
+        // Reading a 16-bit ADC value, max (unsigned) is 65536,
+        // call it 6 characters to be safe. Max payload length
+        // is keyLen + 6 + 1 (for separator) + 1 (null-terminator)
+        this->payloadLen = keyLen + 8;
 
-        if( _bufSize > ADC_MAX_BUFFER_SIZE ){
-            printk( "WARNING: Requesting more data than buffer has room for\n" );
-        }
-        this->buffSize = _bufSize;
-        this->sensorConfig = {
-            .channels    = BIT( _channelID ),
-		    .buffer      = dataBuffer,
-		    .buffer_size = this->buffSize * sizeof( uint16_t ),
-		    .resolution  = _res,
-        };
+        channelConfig.gain             = _gain;
+        channelConfig.reference        = _ref;
+        channelConfig.acquisition_time = _aqTime;
+        channelConfig.channel_id       = _channelID;
+        channelConfig.input_positive   = _input;
+
+        sensorConfig.channels    = BIT( _channelID );
+        sensorConfig.buffer      = dataBuffer;
+        sensorConfig.buffer_size = this->buffSize * sizeof( uint16_t );
+        sensorConfig.resolution  = _res;
+
     }
 
     int initialise(){
@@ -63,26 +65,37 @@ public:
                     this->channelConfig.channel_id, ret );
             return ret;
 	    }
+        return 0;
     }
-    uint16_t * getRawData(){
+
+    uint16_t getData(){
         if( !this->devBinding ){
             printk( "Binding not set; ADC possibly not initialised\n" );
-            return nullptr;
+            return 0;
         }
         if ( auto ret=adc_read( this->devBinding, &this->sensorConfig ) ) {
             printk( "Failed to read ADC with code %i", ret );
-            return nullptr;
+            return 0;
         }
+        this->sensorData = ( uint16_t ) *this->dataBuffer;
+        return this->sensorData;
     }
 
-    //int cleanup();
-    dataStruct requestData(){
-
+    char * requestPayload(){
+        this->getData();
+        size_t wrote = sprintf( this->payloadData, "%s:%hu",
+                                this->keyName, this->sensorData );
+        if( wrote + 1 > payloadLen ){
+            printk( "Uh-oh, not enough room in payload buffer...\n" );
+        }
+        return this->payloadData;
     }
+
 
 private:
     struct adc_channel_cfg channelConfig;
     struct adc_sequence sensorConfig;
-    uint16_t dataBuffer[ ADC_MAX_BUFFER_SIZE ];
-    uint32_t buffSize;
+    uint16_t dataBuffer[ bufferSize ];
+    uint16_t sensorData;
+    uint32_t buffSize;    
 };
