@@ -1,8 +1,6 @@
 #include <zephyr.h>
-#include <board.h>
-#include <device.h>
+
 #include <misc/printk.h>
-#include "config.h"
 #include <adc.h>
 #include <hal/nrf_saadc.h>
 #include <sensor.h>
