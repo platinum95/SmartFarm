@@ -1,0 +1,55 @@
+diff --git a/src/bluetooth_6lowpand.c b/src/bluetooth_6lowpand.c
+index b232f86..f5d8b7a 100644
+--- a/src/bluetooth_6lowpand.c
++++ b/src/bluetooth_6lowpand.c
+@@ -294,6 +294,16 @@ static int read_wifi_cfg(void)
+ 	return validate_store_auth_params(ssid_value, key_value);
+ }
+ 
++static void config_itf(){
++    pid_t nPid;
++    char * const params[] = { NULL };
++    nPid = fork();
++    // Set IPv6 addr of bt0
++    if( !nPid )
++        execv( "/etc/network/bt0_addr.sh", params );
++ 
++    exit( 0 );
++}
+ 
+ /* Connect the BLE 6lowpan device. */
+ static bool connect_device(char *addr, bool connect)
+@@ -301,17 +311,23 @@ static bool connect_device(char *addr, bool connect)
+ 	int fd;
+ 	bool ret = false;
+ 	char command[64];
+-
++    pid_t fPid;
+ 	fd = open(CONTROLLER_PATH, O_WRONLY);
+ 	if (fd < 0) {
+ 		perror("Can not open 6lowpan controller\n");
+ 		return ret;
+ 	}
+ 
+-	if (connect)
+-		snprintf(command, sizeof(command), "connect %s 1", addr);
++	if (connect){
++		snprintf(command, sizeof(command), "connect %s 2", addr);
++        fPid = fork();
++        if( !fPid ){
++            // Child, go configure the interface
++            config_itf();
++        }
++    }
+ 	else
+-		snprintf(command, sizeof(command), "disconnect %s 1", addr);
++		snprintf(command, sizeof(command), "disconnect %s 2", addr);
+ 
+ 	if (write(fd, command, sizeof(command)) > 0)
+ 		ret = true;
+diff --git a/src/bluez b/src/bluez
+--- a/src/bluez
++++ b/src/bluez
+@@ -1 +1 @@
+-Subproject commit 992e7f5cb288cee42453fa018c381984c86fd217
++Subproject commit 992e7f5cb288cee42453fa018c381984c86fd217-dirty
