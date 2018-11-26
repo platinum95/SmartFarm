@@ -26,7 +26,7 @@
 #include "config.h"
 #include "lights.h"
 
-#define ATTR_UPDATE_INTERVAL 15000
+#define ATTR_UPDATE_INTERVAL 15
 
 #define RC_STR(rc)	((rc) == 0 ? "OK" : "ERROR")
 #define PRINT_RESULT(func, rc)	\
@@ -97,19 +97,19 @@ static int network_setup(void)
 	return 0;
 }
 
-void attribute_work_handler(struct k_work *work)
-{
-  printf("Updating Attributes\n");
-  update_attributes();
-  sensors();
-}
-
-K_WORK_DEFINE(attribute_work, attribute_work_handler);
-
-void attribute_timer_handler(struct k_timer *attribute_timer)
-{
-	k_work_submit(&attribute_work);
-}
+// void attribute_work_handler(struct k_work *work)
+// {
+//   printf("Updating Attributes\n");
+//   update_attributes();
+//   sensors();
+// }
+//
+// K_WORK_DEFINE(attribute_work, attribute_work_handler);
+//
+// void attribute_timer_handler(struct k_timer *attribute_timer)
+// {
+// 	k_work_submit(&attribute_work);
+// }
 
 void main(void)
 {
@@ -122,9 +122,15 @@ void main(void)
 
   tb_pubsub_start();
 
-  struct k_timer attribute_timer;
-  k_timer_init(&attribute_timer, attribute_timer_handler, NULL);
-  k_timer_start(&attribute_timer, K_SECONDS(5), K_SECONDS(5));
+  //struct k_timer attribute_timer;
+  //k_timer_init(&attribute_timer, attribute_timer_handler, NULL);
+  //k_timer_start(&attribute_timer, K_SECONDS(ATTR_UPDATE_INTERVAL), K_SECONDS(ATTR_UPDATE_INTERVAL));
+  struct device *dev = device_get_binding("DHT11");
 
-  k_thread_suspend(k_current_get());
+  while (1) {
+    update_attributes();
+    k_sleep(10000);
+    sensors(dev);
+  }
+  //k_thread_suspend(k_current_get());
 }
