@@ -23,9 +23,12 @@ void sensorWorker() {
     static char jsonBuff[ 142 ];
     jsonBuff[ 0 ] = 0;
     snprintf( jsonBuff, 142, "{" );
-    for( auto sensor : sensors )
-        snprintf( jsonBuff + strlen( jsonBuff ), 
-                  142, "%s,", sensor->requestPayload() );
+    for( auto sensor : sensors ){
+        if( const char * sensorPayload = sensor->requestPayload() ){
+            snprintf( jsonBuff + strlen( jsonBuff ), 
+                      142, "%s,", sensorPayload );
+        }
+    }
     if( strlen( jsonBuff ) < 2 ){
         return;    // Abort if some error has occurred
     }
@@ -33,7 +36,7 @@ void sensorWorker() {
     jsonBuff[ strlen( jsonBuff ) - 1 ] = 0;
     snprintf( jsonBuff + strlen( jsonBuff ), 142, "}" );
     tb_publish_telemetry( jsonBuff );
-    printf( "telemetry published\n" );
+    printf( "telemetry published: %s\n", jsonBuff );
 }
 
 void attributeWorker(){
@@ -47,6 +50,7 @@ void attributeWorker(){
         (uint32_t)k_uptime_get_32() / 1000 );
 
     tb_publish_attributes( payload );
+    printf( "Attribs published: %s\n", payload );
 }
 
 

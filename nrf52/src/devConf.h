@@ -8,7 +8,7 @@ ADCSensor< 16 > ForceSensor( "WaterLevel",          // Key name
                              ADC_ACQUISITION_TIME,  // Aquisition time
                              NRF_SAADC_INPUT_AIN1 );// Input ID
 
-ADCSensor< 16 > SoilSensor( "SoilMoisture", 
+ADCSensor< 16 > SoilSensor( "M", 
                              CONFIG_ADC_0_NAME,
                              2,
                              ADC_ACQUISITION_TIME,

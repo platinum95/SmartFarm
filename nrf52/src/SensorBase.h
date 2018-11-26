@@ -19,7 +19,7 @@ protected:
         if( devName ){
             this->devBinding = device_get_binding( this->devName );
             if( !this->devBinding ){
-                printf("Cannot get device binding for %s", this->devName );
+                printf("Cannot get device binding for %s\n", this->devName );
                 return -1;
             }
         }
@@ -50,12 +50,18 @@ public:
         if( !this->devBinding ){
             return nullptr;
         }
+        int r = sensor_sample_fetch( this->devBinding );
+        if ( r ) {
+            printf("sensor_channel_get failed, returned: %d\n", r);
+            return nullptr;
+        }
+
         this->payloadData[ 0 ] = 0;
         for( int i = 0; i < this->keyChanLength; i++ ){
             struct sensor_value sensorVal;
-            int r = sensor_channel_get( this->devBinding,
-                                        this->keyChanPairs[ i ].channel,
-                                        &sensorVal );
+            r = sensor_channel_get( this->devBinding,
+                                    this->keyChanPairs[ i ].channel,
+                                    &sensorVal );
             if ( r ) {
                 printf("sensor_channel_get failed, returned: %d\n", r);
                 break;
@@ -65,8 +71,7 @@ public:
                      sensor_value_to_double( &sensorVal ) );
         }
         // Remove the final comma
-        this->payloadData[ strlen( this->payloadData ) ] = 0;
-        printf( "Final data %s\n", this->payloadData );
+        this->payloadData[ strlen( this->payloadData ) - 1 ] = 0;
         return this->payloadData;
     }
 
@@ -129,13 +134,16 @@ public:
             printf( "Failed to read ADC with code %i", ret );
             return 0;
         }
-        this->sensorData = ( uint16_t ) *this->dataBuffer;
+        if( ( this->sensorData = ( int16_t ) *this->dataBuffer ) < 0 ){
+            this->sensorData = 0;
+        }
+        
         return this->sensorData;
     }
 
     char * requestPayload(){
         this->getData();
-        size_t wrote = sprintf( this->payloadData, "%s:%hu",
+        size_t wrote = sprintf( this->payloadData, "\"%s\":\"%hi\"",
                                 this->keyName, this->sensorData );
         if( wrote + 1 > payloadLen ){
             printf( "Uh-oh, not enough room in payload buffer...\n" );
@@ -148,5 +156,5 @@ private:
     struct adc_channel_cfg channelConfig;
     struct adc_sequence sensorConfig;
     uint16_t dataBuffer[ bufferSize ];
-    uint16_t sensorData;
+    int16_t sensorData;
 };
