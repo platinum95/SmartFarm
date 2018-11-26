@@ -151,6 +151,7 @@ void handle_rpc(char *json, int json_len)
 	 * then pass the JSON on to be fully parsed in a RPC method-specific
 	 * function.
 	 */
+	 
 	if ( strncmp(&json[11], "putLights", strlen("putLights")) == 0 ) {
 		handle_putLights(json, json_len);
 	}
