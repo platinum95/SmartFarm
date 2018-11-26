@@ -1,0 +1,52 @@
+
+Current layout has 3 stages: 
+    Server (Linux) <--> Field Node (Raspberry Pi) <--> Sensor Node (nrf52)
+
+This network is semi-simulated, in that the server -> field node connection takes place over LAN rather than WAN.
+This saves us routing potentially buggy IPv6 packets over the internet.
+
+#### Server-> Field Node connection setup ####
+The Server -> Node connection is set up such that the Server (probably just a laptop running Linux) configures a spare network
+interface (probably ethernet since its the easiest) as a gateway for a subnet. 
+In this case, the subnet is 192.168.2.0/24 (ipv4) and fd00:b::/64 (ipv6).
+The IP of the interface on the server is set to 192.168.2.1 and fd00:b::1.
+The Pi is then connected to the server (probably ethernet).
+DHCP can be used to assign an IP to the Pi, but it's easier to just use a static IP to save dealing with DHCP servers.
+The corresponding interface on the Pi is therefore set to 192.168.2.9 and fd00:b::2 (no particular reason for those values).
+An IP routing rule should be automatically assigned to route addresses bound for this subnet out that interface.
+The server_interface file in the repo has the interface config for the server.
+The fnode_interface file has the config for the field node.
+The Wifi interface was also set up on the Pi so that we can still SSH to it even if this subnet connection breaks.
+
+#### Field Node -> Sensor Node connection setup ####
+Radvd is set up to advertise on the bt0 interface (which doesn't exist until we're connected to a device).
+It was set up to allocate ipv6 addresses to the sensor nodes in the range fd00:a::/64.
+The bt0 interface was then also allocated the address fd00:a::1, to act as a gateway for the sensors.
+Since none of this can be set until a sensor is connected (thank you Bluez for that) the bluetooth_6lowpand daemon was modified
+so that it runs a script when a BLE device is connected which sets the gateway IP of the bt0 interface and restarts the Radvd service.
+At this point, the sensor should get allocated a non link-local address which is ping-able from the Pi.
+
+#### Server -> Sensor node routing setup ####
+To be able to route packets between the edge nodes and the server, some routing rules were added.
+A rule was added on the server to route IPv6 packets bound for fd00:a::/64 out through fd00:b::2. This further uses the other routing 
+rule which was added by default earlier by setting up this subnet (i.e. fd00:b::/64 via ethernet interface) so the packets for
+the sensor get sent out along that interface.
+IPv6 forwarding is enabled on both devices (probably doesn't have to be done on the server since we're not expecting the pi to need WAN access).
+
+#### Sample layout from test implementation ####
+This was all done on a laptop running Ubuntu, a Pi running raspbian lite, and an nrf52 running the tb_device sample code.
+The laptop has an ethernet interface called enp2s0. 
+The Pi has an ethernet interface called eth0 and a BLE interface called bt0.
+The final layout looked something like this:
+
+ ____________
+|           |         Simulated WAN network          |             Simulated Field Network
+|  Laptop   |                                        |
+|           |                                        |
+\------------\                                    ___|___                                 _______
+ \------------\ [enp2s0]<--{fd00:b::/64}-->[eth0] | Pi  |[bt0]<--{fd00:a::/64}--> [bt_itf]=nrf52=
+  \____________\               subnet             |_____|           subnet                -------
+            <fd00:b::1>                  <fd00:b::2> |  <fd00:a::1>                     <fd00:a::edc7:efff:fe27:edcd>
+               Server                      Rpi-serv  |    Rpi-edge                                 Edge addr 
+                addr                         addr    |      addr
+                                                     | 
