@@ -29,8 +29,10 @@
 static const char *TB_ATTRIBUTES_TOPIC = "v1/devices/me/attributes";
 static const char *TB_TELEMETRY_TOPIC = "v1/devices/me/telemetry";
 static const char *TB_RPC_TOPIC[] = {"v1/devices/me/rpc/request/+"};
+static const char *TB_RPC_RESP_TOPIC = "v1/devices/me/rpc/response/00000000000000000"; // Plenty of redundancy...
 static const enum mqtt_qos TB_RPC_QOS[] = {MQTT_QoS0};
-
+RpCallback ** locRpcList;
+int locRpcLen;
 /* For some reason thingsboard.io is very slow to respond to TX Connect
  * requests. We'll implement them using an alert to signal when
  * a connection is established. */
@@ -40,6 +42,36 @@ K_ALERT_DEFINE(tb_connack_alert, K_ALERT_DEFAULT, 1);
 #define PRINT_RESULT(func, rc)	\
 	printf("[%s:%d] %s: %d <%s>\n", __func__, __LINE__, \
 	       (func), rc, RC_STR(rc))
+
+static char * getRpcResponseTopic( const char * request, char * response ){
+	static char strTest[50];
+	strcpy( strTest, response );
+	// Response is global anyway but meh
+	printf("Trying to get resp topic\n");
+	if( !strlen( request ) )
+		return NULL;
+	
+	// Find the index of the request ID in the request string.
+	// Realistically this value should always be the same (26)
+	int reqIdIdx = 0;
+	for( int i = strlen( request ) - 1; i > 0; i-- ){
+		if( request[ i ] == '/' ){
+			reqIdIdx = i + 1;
+			break;
+		}
+	}
+
+	// Set the position in the response topic to place the id
+	int resIdIdx = 27;
+	// Poor mans strcpy
+	for( int i = reqIdIdx; i < strlen( request ); i++ ){
+		strTest[ resIdIdx ] = request[ i ];
+		resIdIdx++;
+	}
+	strTest[resIdIdx] = 0;
+
+	return strTest;
+}
 
 /* Container for some structures used by the MQTT pubsub app. */
 static struct pubsub_ctx {
@@ -57,7 +89,7 @@ static struct pubsub_ctx {
 } pubsub_ctx;
 
 /* MQTT publish message descriptor */
-static struct pub_msg {
+struct pub_msg {
 	struct k_mem_block mem_block;
 	struct mqtt_publish_msg mqtt_publish_msg;
 };
@@ -75,8 +107,8 @@ struct rpc_putLights {
 		bool value;
 	} params;
 };
-
-void handle_putLights(char *json, int json_len)
+uint8_t lState[4] = { 0, 0, 0 };
+uint8_t * handle_putLights(char *json, int json_len)
 {
 	printf("[%s:%d] parsing: %s\n",	__func__, __LINE__, json);
 
@@ -84,14 +116,14 @@ void handle_putLights(char *json, int json_len)
 
 	/* JSON RPC params for putLights */
 	static const struct json_obj_descr rpc_descr_params[] = {
-		JSON_OBJ_DESCR_PRIM(struct rpc_putLights_params, ledno, JSON_TOK_NUMBER),
-		JSON_OBJ_DESCR_PRIM(struct rpc_putLights_params, value, JSON_TOK_TRUE),
+		JSON_OBJ_DESCR_PRIM( struct rpc_putLights_params, ledno, JSON_TOK_NUMBER),
+		JSON_OBJ_DESCR_PRIM( struct rpc_putLights_params, value, JSON_TOK_TRUE),
 	};
 
 	/* JSON generic thingsboard.io RPC */
 	static const struct json_obj_descr rpc_descr[] = {
-		JSON_OBJ_DESCR_PRIM(struct rpc_putLights, method, JSON_TOK_STRING),
-		JSON_OBJ_DESCR_OBJECT(struct rpc_putLights, params, rpc_descr_params)
+		JSON_OBJ_DESCR_PRIM( struct rpc_putLights, method, JSON_TOK_STRING),
+		JSON_OBJ_DESCR_OBJECT( struct rpc_putLights, params, rpc_descr_params)
 	};
 
 	struct rpc_putLights rx_rpc={};
@@ -101,14 +133,16 @@ void handle_putLights(char *json, int json_len)
 	printf("[%s:%d] parsed method: %s, params: led%d=%s\n",
 		__func__, __LINE__, rx_rpc.method, rx_rpc.params.ledno, rx_rpc.params.value ? "ON" : "OFF");
 
+	lState[ rx_rpc.params.ledno -1  ] = rx_rpc.params.value;
 	/* Call light control provided by lights.c */
 	putLights(rx_rpc.params.ledno, rx_rpc.params.value);
+	return lState;
 }
 
 /*
  * Process an RPC request received from the thingsboard instance
  */
-void handle_rpc(char *json, int json_len)
+const char * handle_rpc(char *json, int json_len)
 {
 	/* Ideally we would parse the JSON fully here extracting both the method
 	 * name and the parameters. However, the limited JSON implementation
@@ -122,15 +156,19 @@ void handle_rpc(char *json, int json_len)
 	 * function.
 	 */
 
-	if ( strncmp(&json[11], "putLights", strlen("putLights")) == 0 ) {
-		handle_putLights(json, json_len);
+	const char * response = NULL;
+	for( int i = 0; i < locRpcLen; i++ ){
+		RpCallback * curRpc = locRpcList[ i ];
+		const char * rpcName = curRpc->name;
+		if ( strncmp( &json[11], rpcName, strlen( rpcName ) ) == 0 ) {
+			printf("RPC found, calling %s\n", rpcName );
+			response = curRpc->callback( json, json_len );
+			return response;
+		}
 	}
+	printk("RPC not found!!\n");
+	return NULL;
 
-	/*
-	else if ( strncmp(&json[11], "putLights", strlen("myMethod")) == 0 ) {
-		handle_myMethod(json, json_len);
-	}
-	*/
 }
 
 /* The signature of this routine must match the connect callback declared at
@@ -187,7 +225,11 @@ static int publish_tx_cb(struct mqtt_ctx *mqtt_ctx, u16_t pkt_id,
 	return rc;
 }
 
-
+static char * rpcRespPayload(){
+	static char * payload[ 50 ];
+	snprintf( payload, 50, "{\"1\":%s,\"2\":%s,\"3\":%s}", lState[0]?"true":"false",lState[1]?"true":"false",lState[2]?"true":"false");
+	return payload;
+}
 /**
  * The signature of this routine must match the publish_rx callback declared at
  * the mqtt.h header.
@@ -216,8 +258,36 @@ static int publish_rx_cb(struct mqtt_ctx *ctx, struct mqtt_publish_msg *msg,
 	printf("[%s:%d] <%s> packet id: %u\n    topic: %s\n    payload: %s\n",
 		__func__, __LINE__, str, pkt_id, msg->topic, msg->msg);
 
+	
 	/* Pass on for RPC processing */
-	handle_rpc(msg->msg, msg->msg_len);
+	const char * respPayload = handle_rpc( msg->msg, msg->msg_len );
+	printf("RPC handled\n");
+	if( respPayload ){
+		const char * responseTopic = getRpcResponseTopic( msg->topic, TB_RPC_RESP_TOPIC );
+		printf("Response topic: %s\n", responseTopic );
+		printf("Response payload: %s\n", respPayload );
+	
+		struct pub_msg pub_msg;
+
+		/* Prepare the pub_msg descriptor for telemetry */
+		rc = prepare_msg( &pub_msg, responseTopic, respPayload );
+
+		if (rc != 0) {
+			PRINT_RESULT("prepare_msg", rc);
+			return;
+		}
+
+		/* Send it to the publish message queue */
+		rc = k_msgq_put(&msgq, &pub_msg, K_NO_WAIT);
+
+		/* If we couldn't send it to the message queue, we need to free memory
+		* that was allocated for the JSON payload */
+
+		if (rc != 0) {
+			k_mem_pool_free(&pub_msg.mem_block);
+			PRINT_RESULT("k_msgq_put", rc);
+		}
+	}
 
 	return rc;
 }
@@ -445,8 +515,10 @@ void tb_publish_telemetry(const char * tlmtry_payload)
 	}
 }
 
-void tb_pubsub_start()
+void tb_pubsub_start( RpCallback * _rpcList[], int _rpcLen )
 {
+	locRpcList = _rpcList;
+	locRpcLen = _rpcLen;
 	k_tid_t tt_tid = k_thread_create(&pubsub_thread_desc, pubsub_stack_area,
                                  K_THREAD_STACK_SIZEOF(pubsub_stack_area),
                                  pubsub_thread,

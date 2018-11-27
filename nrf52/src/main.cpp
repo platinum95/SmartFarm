@@ -18,6 +18,19 @@
 #include "btHelper.h"
 #include "config.h"
 #include "devConf.h"
+#include <type_traits>
+#include <pwm.h>
+
+
+char * updateSettings( char* json, int jsonLen ){
+    printf( "Updating settings...\n" );
+    return 0;
+}
+
+RpCallback settingsRpc = {
+    callback    : &updateSettings,
+    name        : "updateSettings"
+};
 
 void sensorWorker() {
     static char jsonBuff[ 142 ];
@@ -66,8 +79,27 @@ void interEvent( struct k_timer *attribute_timer ){
     k_work_submit( &interWork );
 }
 
+#if defined(CONFIG_SOC_QUARK_SE_C1000) || defined(CONFIG_SOC_QUARK_D2000)
+#define PWM_DEV CONFIG_PWM_QMSI_DEV_NAME
+#elif defined(CONFIG_PWM_NRF5_SW)
+#define PWM_DEV CONFIG_PWM_NRF5_SW_0_DEV_NAME
+#else
+//#error "Choose supported board or add new board for the application"
+#endif
+/*
+ * Unlike pulse width, period is not a critical parameter for
+ * motor control. 20ms is commonly used.
+ */
+#define PERIOD 25000//(USEC_PER_SEC / 50) * 100
+
+/* all in micro second */
+#define STEPSIZE 100
+#define MINPULSEWIDTH 700
+#define MAXPULSEWIDTH 2300
+
 
 void main(void){
+    lights_init();
     // Initialise all sensors for this device
     for( auto sensor : sensors )
         sensor->initialise();
@@ -77,14 +109,16 @@ void main(void){
     if (rc < 0) {
         return;
     }
-
-    tb_pubsub_start();
+    int rpcLen = std::extent< decltype( rpcList ) >::value;
+    printf("Got size %i\n", rpcLen );
+    tb_pubsub_start( rpcList, rpcLen );
 
     struct k_timer interTimer;
     k_timer_init( &interTimer, interEvent, NULL );
     k_timer_start( &interTimer, K_SECONDS( 5 ), K_SECONDS( 5 ) );
 
     k_thread_suspend( k_current_get() );
+	
 
 
     // while( 1 ){

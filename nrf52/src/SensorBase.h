@@ -4,6 +4,8 @@
 #include <adc.h>
 #include <hal/nrf_saadc.h>
 #include <sensor.h>
+#include <stdio.h>
+#include <string.h>
 
 class SensorBase {
 public:

@@ -1,4 +1,5 @@
 #include "SensorBase.h"
+#include "RpcBase.h"
 
 #define ADC_ACQUISITION_TIME    ADC_ACQ_TIME(ADC_ACQ_TIME_MICROSECONDS, 10)
 
@@ -20,4 +21,20 @@ DriverSensor dht( "DHT11",
                     KeyChan{ "H", SENSOR_CHAN_HUMIDITY }
                   }, 2 );
 
+
+
+#include "lights.h"
+
+RpCallback setLight = {
+    callback    : &putLights2,
+    name        : "putLights"
+};
+
+RpCallback setServoCb = {
+    callback    : &setServo,
+    name        : "setServo"
+};
+
+
 SensorBase * sensors[] = { &ForceSensor, &SoilSensor, &dht };
+RpCallback * rpcList[] = { &setLight, &setServoCb };
