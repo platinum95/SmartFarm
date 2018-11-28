@@ -19,7 +19,6 @@
 
 #include <json.h>
 
-#include "lights.h"
 #include "config.h"
 
 #define MAX_PENDING_PUB_MSGS 8
@@ -29,7 +28,7 @@
 static const char *TB_ATTRIBUTES_TOPIC = "v1/devices/me/attributes";
 static const char *TB_TELEMETRY_TOPIC = "v1/devices/me/telemetry";
 static const char *TB_RPC_TOPIC[] = {"v1/devices/me/rpc/request/+"};
-static const char *TB_RPC_RESP_TOPIC = "v1/devices/me/rpc/response/00000000000000000"; // Plenty of redundancy...
+static const char *TB_RPC_RESP_TOPIC = "v1/devices/me/rpc/response/000";
 static const enum mqtt_qos TB_RPC_QOS[] = {MQTT_QoS0};
 RpCallback ** locRpcList;
 int locRpcLen;
@@ -42,36 +41,6 @@ K_ALERT_DEFINE(tb_connack_alert, K_ALERT_DEFAULT, 1);
 #define PRINT_RESULT(func, rc)	\
 	printf("[%s:%d] %s: %d <%s>\n", __func__, __LINE__, \
 	       (func), rc, RC_STR(rc))
-
-static char * getRpcResponseTopic( const char * request, char * response ){
-	static char strTest[50];
-	strcpy( strTest, response );
-	// Response is global anyway but meh
-	printf("Trying to get resp topic\n");
-	if( !strlen( request ) )
-		return NULL;
-	
-	// Find the index of the request ID in the request string.
-	// Realistically this value should always be the same (26)
-	int reqIdIdx = 0;
-	for( int i = strlen( request ) - 1; i > 0; i-- ){
-		if( request[ i ] == '/' ){
-			reqIdIdx = i + 1;
-			break;
-		}
-	}
-
-	// Set the position in the response topic to place the id
-	int resIdIdx = 27;
-	// Poor mans strcpy
-	for( int i = reqIdIdx; i < strlen( request ); i++ ){
-		strTest[ resIdIdx ] = request[ i ];
-		resIdIdx++;
-	}
-	strTest[resIdIdx] = 0;
-
-	return strTest;
-}
 
 /* Container for some structures used by the MQTT pubsub app. */
 static struct pubsub_ctx {
@@ -99,45 +68,39 @@ struct pub_msg {
 K_MSGQ_DEFINE(msgq, sizeof(struct pub_msg), MAX_PENDING_PUB_MSGS, 4);
 K_MEM_POOL_DEFINE(pub_pool, 16, 128, 8, 4);
 
-/* Must match the JSON payload format specified by JSON_OBJ_DESCR... below */
-struct rpc_putLights {
-	const char* method;
-	struct rpc_putLights_params {
-		int ledno;
-		bool value;
-	} params;
-};
-uint8_t lState[4] = { 0, 0, 0 };
-uint8_t * handle_putLights(char *json, int json_len)
-{
-	printf("[%s:%d] parsing: %s\n",	__func__, __LINE__, json);
 
-	/* Refer to zephyr/include/json.h !!! */
+/*
+ *  Determine the RPC response topic from the received request topic
+ */
+static char * getRpcResponseTopic( const char * request ){
+	// Local static char array for holding the response topic
+	static char response[40];
+	// Copy from RO memory into our modifiable array
+	strcpy( response, TB_RPC_RESP_TOPIC );
 
-	/* JSON RPC params for putLights */
-	static const struct json_obj_descr rpc_descr_params[] = {
-		JSON_OBJ_DESCR_PRIM( struct rpc_putLights_params, ledno, JSON_TOK_NUMBER),
-		JSON_OBJ_DESCR_PRIM( struct rpc_putLights_params, value, JSON_TOK_TRUE),
-	};
+	// Find the index of the request ID in the request string.
+	// Realistically this value should always be the same (26)
+	int reqIdIdx = 0;
+	for( int i = strlen( request ) - 1; i > 0; i-- ){
+		if( request[ i ] == '/' ){
+			reqIdIdx = i + 1;
+			break;
+		}
+	}
 
-	/* JSON generic thingsboard.io RPC */
-	static const struct json_obj_descr rpc_descr[] = {
-		JSON_OBJ_DESCR_PRIM( struct rpc_putLights, method, JSON_TOK_STRING),
-		JSON_OBJ_DESCR_OBJECT( struct rpc_putLights, params, rpc_descr_params)
-	};
+	// Set the position in the response topic to place the id
+	int resIdIdx = 27;
+	// Poor mans strcpy
+	for( int i = reqIdIdx; i < strlen( request ); i++ ){
+		response[ resIdIdx ] = request[ i ];
+		resIdIdx++;
+	}
+	//Set null-terminator
+	response[ resIdIdx ] = 0;
 
-	struct rpc_putLights rx_rpc={};
-
-	json_obj_parse(json, json_len, rpc_descr, ARRAY_SIZE(rpc_descr), &rx_rpc);
-
-	printf("[%s:%d] parsed method: %s, params: led%d=%s\n",
-		__func__, __LINE__, rx_rpc.method, rx_rpc.params.ledno, rx_rpc.params.value ? "ON" : "OFF");
-
-	lState[ rx_rpc.params.ledno -1  ] = rx_rpc.params.value;
-	/* Call light control provided by lights.c */
-	putLights(rx_rpc.params.ledno, rx_rpc.params.value);
-	return lState;
+	return response;
 }
+
 
 /*
  * Process an RPC request received from the thingsboard instance
@@ -157,11 +120,12 @@ const char * handle_rpc(char *json, int json_len)
 	 */
 
 	const char * response = NULL;
+	// Loop through all available callbacks, searching for a hit
 	for( int i = 0; i < locRpcLen; i++ ){
 		RpCallback * curRpc = locRpcList[ i ];
 		const char * rpcName = curRpc->name;
 		if ( strncmp( &json[11], rpcName, strlen( rpcName ) ) == 0 ) {
-			printf("RPC found, calling %s\n", rpcName );
+			// If found, call the callback
 			response = curRpc->callback( json, json_len );
 			return response;
 		}
@@ -225,11 +189,7 @@ static int publish_tx_cb(struct mqtt_ctx *mqtt_ctx, u16_t pkt_id,
 	return rc;
 }
 
-static char * rpcRespPayload(){
-	static char * payload[ 50 ];
-	snprintf( payload, 50, "{\"1\":%s,\"2\":%s,\"3\":%s}", lState[0]?"true":"false",lState[1]?"true":"false",lState[2]?"true":"false");
-	return payload;
-}
+
 /**
  * The signature of this routine must match the publish_rx callback declared at
  * the mqtt.h header.
@@ -261,9 +221,9 @@ static int publish_rx_cb(struct mqtt_ctx *ctx, struct mqtt_publish_msg *msg,
 	
 	/* Pass on for RPC processing */
 	const char * respPayload = handle_rpc( msg->msg, msg->msg_len );
-	printf("RPC handled\n");
+	// If the RPC request expects a response, formulate it and pass it along
 	if( respPayload ){
-		const char * responseTopic = getRpcResponseTopic( msg->topic, TB_RPC_RESP_TOPIC );
+		const char * responseTopic = getRpcResponseTopic( msg->topic );
 		printf("Response topic: %s\n", responseTopic );
 		printf("Response payload: %s\n", respPayload );
 	

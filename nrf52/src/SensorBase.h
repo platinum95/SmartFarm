@@ -7,11 +7,17 @@
 #include <stdio.h>
 #include <string.h>
 
+/*
+The Base classes and hierarchies for the various sensor
+configurations that can be set on a per-device level.
+*/
+
+// Base class for all sensor types
 class SensorBase {
 public:
     SensorBase(){
     }
-
+    // These functions must be overloaded by child classes
     virtual int initialise() = 0;
     virtual char * requestPayload() = 0;
     struct device * devBinding;
@@ -33,11 +39,13 @@ protected:
     size_t payloadLen;
 };
 
+// Symbolises a key-channel relation
 struct KeyChan{
     const char * key;
     sensor_channel channel;
 };
 
+// Sensor base that uses the Zephyr driver backend, such as the DHT11
 class DriverSensor : public SensorBase {
 public:
     DriverSensor( const char * _devName, KeyChan _keyChanPairs[], uint16_t _keyChanLen ){
@@ -50,15 +58,19 @@ public:
     }
     char * requestPayload(){
         if( !this->devBinding ){
+            // Just return if it hasn't been initialised
             return nullptr;
         }
         int r = sensor_sample_fetch( this->devBinding );
         if ( r ) {
+            // This will happen often with the DHT11 due to the inadequate 
+            // timing resolution
             printf("sensor_channel_get failed, returned: %d\n", r);
             return nullptr;
         }
 
         this->payloadData[ 0 ] = 0;
+        // Get data from all required channels, append to the payload
         for( int i = 0; i < this->keyChanLength; i++ ){
             struct sensor_value sensorVal;
             r = sensor_channel_get( this->devBinding,
@@ -82,6 +94,7 @@ private:
     uint8_t keyChanLength; 
 };
 
+// Class for devices that use the ADC such as soil moisture
 template< int bufferSize >
 class ADCSensor : public SensorBase {
 public:

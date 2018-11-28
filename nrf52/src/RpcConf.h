@@ -4,8 +4,7 @@
 extern "C"{
 #endif
 
-void putLights(u32_t ledno, bool state);
-char * putLights2( char *, int );
+char * putLights( char *, int );
 char * setServo( char * json, int jsonLen );
 bool getLights(u32_t ledno);
 void lights_init();

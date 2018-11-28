@@ -2,7 +2,7 @@
 #include <board.h>
 #include <device.h>
 #include <gpio.h>
-#include "lights.h"
+#include "RpcConf.h"
 #include <json.h>
 #include <pwm.h>
 #include <nrfx_pwm.h>
@@ -47,24 +47,17 @@ struct rpc_setServo {
 	} params;
 };
 
-struct device *led_dev;
 
-void putLights(u32_t ledno, bool state)
-{
-    gpio_pin_write(led_dev, led_arr[ledno], state ? 0 : 1);
-}
-uint8_t ledState[4] = { 0, 0, 0 };
-
+// RPC callback for setting the servo to ON or OFF
 char * setServo( char * json, int jsonLen ){
     /* Refer to zephyr/include/json.h !!! */
-    static char * payload[ 50 ];
     struct device *pwm_dev = device_get_binding( PWM_DEV );
 	if (!pwm_dev) {
 		printf("Cannot find PWM device!\n");
 		return NULL;
 	}
 
-	/* JSON RPC params for putLights */
+	/* JSON RPC params for setServo */
 	static const struct json_obj_descr rpc_descr_params[] = {
 		JSON_OBJ_DESCR_PRIM(struct rpc_setServo_params, value, JSON_TOK_NUMBER),
 	};
@@ -90,10 +83,16 @@ char * setServo( char * json, int jsonLen ){
 			printf( "Failed to set PWM\n" );
 	}
 
+	// No response
 	return NULL;
 }
 
-char * putLights2( char * json, int jsonLen ){
+struct device *led_dev;
+
+uint8_t ledState[4] = { 0, 0, 0 };
+
+// RPC callback for setting one of the LEDs on
+char * putLights( char * json, int jsonLen ){
     /* Refer to zephyr/include/json.h !!! */
     static char * payload[ 50 ];
 
@@ -116,7 +115,7 @@ char * putLights2( char * json, int jsonLen ){
 
     gpio_pin_write(led_dev, led_arr[rx_rpc.params.ledno], rx_rpc.params.value ? 0 : 1);
 
-    
+    // Respond with the current LED state
 	snprintf( payload, 50, "{\"1\":%s,\"2\":%s,\"3\":%s}", ledState[0]?"true":"false",ledState[1]?"true":"false",ledState[2]?"true":"false");
 	return payload;
 }

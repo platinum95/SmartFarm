@@ -21,17 +21,18 @@
 #include <type_traits>
 #include <pwm.h>
 
-
+// RPC callback for updating overall device settings.
+// Common between all devices for easier remote configuration.
+// Not yet implemented.
 char * updateSettings( char* json, int jsonLen ){
     printf( "Updating settings...\n" );
     return 0;
 }
 
-RpCallback settingsRpc = {
-    callback    : &updateSettings,
-    name        : "updateSettings"
-};
+RPCB( settingsRpc, updateSettings, updateSettings );
 
+// Retrieve payloads from all configured sensors. Concatentate
+// and send the data to the MQTT broker.
 void sensorWorker() {
     static char jsonBuff[ 142 ];
     jsonBuff[ 0 ] = 0;
@@ -52,6 +53,7 @@ void sensorWorker() {
     printf( "telemetry published: %s\n", jsonBuff );
 }
 
+// Send attribute update to MQTT/TB
 void attributeWorker(){
     static char payload[ 128 ];
 
@@ -66,7 +68,7 @@ void attributeWorker(){
     printf( "Attribs published: %s\n", payload );
 }
 
-
+// The work task that updates TB
 void interWorker( struct k_work *work ){
     attributeWorker();
     sensorWorker();
@@ -74,60 +76,37 @@ void interWorker( struct k_work *work ){
 
 
 K_WORK_DEFINE( interWork, interWorker );
-
+// The timer event that queues the work task
 void interEvent( struct k_timer *attribute_timer ){
     k_work_submit( &interWork );
 }
 
-#if defined(CONFIG_SOC_QUARK_SE_C1000) || defined(CONFIG_SOC_QUARK_D2000)
-#define PWM_DEV CONFIG_PWM_QMSI_DEV_NAME
-#elif defined(CONFIG_PWM_NRF5_SW)
-#define PWM_DEV CONFIG_PWM_NRF5_SW_0_DEV_NAME
-#else
-//#error "Choose supported board or add new board for the application"
-#endif
-/*
- * Unlike pulse width, period is not a critical parameter for
- * motor control. 20ms is commonly used.
- */
-#define PERIOD 25000//(USEC_PER_SEC / 50) * 100
-
-/* all in micro second */
-#define STEPSIZE 100
-#define MINPULSEWIDTH 700
-#define MAXPULSEWIDTH 2300
-
-
 void main(void){
+    // Initialise all sensors and lights for this device
     lights_init();
-    // Initialise all sensors for this device
     for( auto sensor : sensors )
         sensor->initialise();
 
+    // Start BT connection
     int rc = networkSetup();
     printf( "Network setup - %i\n", rc );
     if (rc < 0) {
         return;
     }
 
+    // Get number of RPC callbacks
     int rpcLen = std::extent< decltype( rpcList ) >::value;
-    printf("Got size %i\n", rpcLen );
+    // Start the TB thread, pass along RPC callbacks
     tb_pubsub_start( rpcList, rpcLen );
 
+    // Start the attrib/telemetry timer event
     struct k_timer interTimer;
     k_timer_init( &interTimer, interEvent, NULL );
     k_timer_start( &interTimer, K_SECONDS( 5 ), K_SECONDS( 5 ) );
 
+    // Suspend the main thread
     k_thread_suspend( k_current_get() );
-	
 
-
-    // while( 1 ){
-    //     k_sleep( 1000 );
-    //     for( auto sensor : sensors )
-    //         printf( "%s\n", sensor->requestPayload() );
-    //     printf( "\n" );        
-    // }
 }
 
 
