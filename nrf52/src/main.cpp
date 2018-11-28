@@ -109,6 +109,7 @@ void main(void){
     if (rc < 0) {
         return;
     }
+
     int rpcLen = std::extent< decltype( rpcList ) >::value;
     printf("Got size %i\n", rpcLen );
     tb_pubsub_start( rpcList, rpcLen );

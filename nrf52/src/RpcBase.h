@@ -8,4 +8,10 @@ typedef struct RpCallback {
     const char * name; 
 } RpCallback;
 
+#define RPCB( _name, _func, _cbName ) \
+            RpCallback _name = {  \
+                .callback = &_func, \
+                .name = #_cbName \
+            }
+
 #endif

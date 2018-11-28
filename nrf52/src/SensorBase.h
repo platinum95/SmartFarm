@@ -99,7 +99,7 @@ public:
         // Reading a 16-bit ADC value, max (unsigned) is 65536,
         // call it 6 characters to be safe. Max payload length
         // is keyLen + 6 + 1 (for separator) + 1 (null-terminator)
-        this->payloadLen = keyLen + 8;
+        this->payloadLen = 128;
 
         channelConfig.gain             = _gain;
         channelConfig.reference        = _ref;
@@ -145,7 +145,7 @@ public:
 
     char * requestPayload(){
         this->getData();
-        size_t wrote = sprintf( this->payloadData, "\"%s\":\"%hi\"",
+        size_t wrote = sprintf( this->payloadData, "\"%s\":\"%i\"",
                                 this->keyName, this->sensorData );
         if( wrote + 1 > payloadLen ){
             printf( "Uh-oh, not enough room in payload buffer...\n" );
